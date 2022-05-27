@@ -1,0 +1,109 @@
+# SplitUtils函数，可以对新闻进行处理，包括新闻的初步处理（正则化、去除特殊符号、分词等，删除停用词，加入公司和行业代码等）
+# 数据来源
+    # 读入的新闻来自于data/ready目录
+    # 停用词来自于data/stopwords目录
+# 数据写出
+    # 新闻对应的行业代码写到了data/codes目录
+    # 新闻对应的分词结果（加入行业代码的版本）写到了results/content的根目录下
+# 内部详细结构如下
+    #split_words(text_type),text_type包括title和content
+        #读入:原始新闻
+        #调用 clean_and_split(txt) 包含正则化、去除特殊符号（链接等），用jieba分词等
+            # 调用remove_special_marks(text) 去除特殊符号（链接等）
+        #写出:分词后的结果(没有公司和行业代码)
+    # 调用 delete stopwords(text_type, file_lst),file_lst是原始数据的列表
+        #读入:停用词表(停用词表是一行一行的txt)
+        #读入:分词结果(在file_lst前加上一个tempo)
+        #调用filter stopwords(words, stopwords_set)
+        #写出:过滤后的分词结果fenci_(没有公司和行业代码)
+            
+                        #以下删除
+                        #调用get_wcode_and_icode(text_type, file_lst),获取公司代码
+                            #file_lst是原始数据的列表
+                            #读入:原始数据
+                            #写出:到codes
+                        #调用join_wcode_and_icode(text_type, file_lst),加入公司和行业代码
+                            #file_lst是原始数据的列表
+                            #读入:分词后结果
+                            #读入:codes结果
+                            #写出:到分词结果
+                            
+    #定义一个新的函数,刷新停用词表 update_stopwords(text_type)
+        #读入:new_stopwords.txt
+        #读入:分词结果
+        #调用:filter_stopwords(words, stopwords_set=stopwords_set)
+        #写出:新的分词结果
+
+
+
+
+
+# 用来计算tf和idf，首先计算所有单词的idf,然后计算tf_idf(一段时间),然后计算公司的tf
+# 计算idf的时候要去重(一个新闻只算一次),计算tf的时候不需要去重,计算公司的tf的时候不需要去重
+# 核心函数
+#   去重函数remove_dup,如何去重?设计的是否合理?
+#   计算行业热度函数acquire_indus_heat
+#   tf-idf(某段时间) * 一级行业词频向量，获得行业热度得分,是否合理?
+# CalCountUtilis最开始调用get_word_count
+# 数据来源
+    # 基本上读入的都是分词后的结果，来自于results/content根目录
+# 数据写出
+   # word_idf里写出了各个词的idf，large_idf表示没有被log的版本
+   # tf_idf/month(week)里的201501.txt写出了某段时间内词的tf_idf(Top200)，精确数据存在vec文件夹里
+   # ?????(是否需要在分词结果里,对每条新闻新增一个词典)???????,不可行啊!需要直接把计算tf_idf和indus_tf合并在一起计算
+   # ?????(如果wcode)没存进来,怎么处理???这里去寻找原来的
+   # industry1(2)里写出了各个行业在全部时段的词频
+   # industry1(2)里的indus_heat，实际上是行业词频和某段时间tf_idf的点积，可以表示某个时间段内的行业热度
+        #其实tf针对的是一段时间或者一个行业的新闻
+# calculate_idf(text_type, time_period, certain_start, certain_end, topN)，计算单词的idf(这里指的是所有新闻)
+    # calculate_tf_idf(text_type, time_period, certain_start, certain_end, topN)
+        #读入:分词结果
+        #写出:word_idf
+    # 计算每个新闻每个单词的tf-idf
+        #调用load_idf,把idf数据读入
+        #调用get_tf_vec,计算词频向量(现在改用collection中的count函数)
+        #调用increment_tf_vec_by_time_period,计算每个月总共的词频向量
+        #调用cal_tf_idf_vec,就是把tf_vec和idf_vec相乘
+        #调用get_topN_word，得到每个月词频最高的N个单词
+        #读入:分词结果/idf
+        #写出:tf_idf里的热词和完整的vec(按月统计)
+        #写出:????建议在分词结果里新增一个词典????额外写在一个excel里
+            
+        #调用calculate_indus_tf(folder, time_period)，获得行业高频词，各行业不同的高频词
+            #其中folder代表content/title,time_period代表month/week
+            #读入:分词结果、原始信息、industry_belong(用来把公司代码映射到行业代码)
+                #希望分词结果里直接存储计数器
+            #调用remove_dup(industry1(2)_to_tf),去除各行业相同的高频词(相当于得到修剪过的词典)
+            #写出:到results/content/industry1(2)的高频词里，是一个个excel
+            #调用acquire_indus_heat(text_type, time_period),计算月度/周度某行业的热度
+                #读入:各行业的高频词信息,得到一个向量
+                #读入:各个时间段的tf_idf
+                #写出:根据tf_idf的时间段划分,得到indus_heat的时间段划分
+#定义一个新的函数gen_news_factor,用来生成策略
+
+
+
+
+
+
+
+# 本函数的目的是计算词频,从而更新停用词
+# CalCountUtilis最开始调用get_word_count(text_type, min_cnt, max_freq)
+# 核心函数是filter_min_max,看想要采用怎样的手段获得新的停用词?
+    # 输入数据
+        # results/content的根目录下
+    # 输出数据
+        # results/content/word_count里的word_count.csv是词频数统计
+        # results/content/word_count里的content_max_frequence.txt content_min_count.txt
+    # 调用merge_word_count(word_count, cur_count),将每日的各条新闻的单词频数统计合并
+    # 调用get_word_count_df(word_count) ,将词频进行排序,得到一个dataframe
+    # 调用add_new_stopwords_by_word_frequence(text_type, words_path, min_cnt, max_freq),更新停用词表
+        # 调用load_word_count读入词频统计结构形成一个词典word_count
+        # 调用filter_min_max,对频率过高或者频数过小的展开过滤
+            # 调用get_word_freq(word_count),得到词频
+            # 数据写出:存储到content_min_count和content_max_freq.txt
+            
+
+#整体逻辑
+#分词得到初步结果 ———— 计算idf/tf-idf/行业热度看是否合理? —
+——— 不合理的话更新停用词 ———— 再看获得的行业热度是否合理?
